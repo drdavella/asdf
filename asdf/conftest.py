@@ -3,11 +3,8 @@
 
 from __future__ import absolute_import, division, unicode_literals, print_function
 
-# this contains imports plugins that configure py.test for asdf tests.
-# by importing them here in conftest.py they are discoverable by py.test
-# no matter how it is invoked within the source tree.
-
-from astropy.tests.pytest_plugins import *
+from astropy.tests.pytest_plugins import TESTED_VERSIONS, PYTEST_HEADER_MODULES
+from astropy.tests.pytest_plugins import enable_deprecations_as_exceptions
 
 import multiprocessing
 import os
