@@ -99,10 +99,15 @@ for dirname in os.listdir(reference_file_root):
         reference_file_root, dirname)
 package_info['packages'].append('asdf.reference_files')
 
-#Define entry points for command-line scripts
+# Define entry points for command-line scripts
 entry_points = {}
 entry_points['console_scripts'] = [
     'asdftool = asdf.commands.main:main',
+]
+# Declare the pytest plugins from astropy that are required
+entry_points['pytest11'] = [
+    'remotedata = astropy.tests.pytest_remotedata',
+    '_doctestplus = astropy.tests.pytest_doctestplus'
 ]
 
 # Add the dependencies which are not strictly needed but enable otherwise skipped tests
