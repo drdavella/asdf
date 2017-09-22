@@ -20,6 +20,9 @@ from . import generic_io
 
 try:
     from astropy.io import fits
+    from astropy.io.fits.file import _File
+    from astropy.io.fits.header import Header
+    from astropy.io.fits.hdu.nonstandard import NonstandardExtHDU
 except ImportError:
     raise ImportError("AsdfInFits requires astropy")
 
@@ -27,6 +30,48 @@ except ImportError:
 ASDF_EXTENSION_NAME = 'ASDF'
 
 FITS_SOURCE_PREFIX = 'fits:'
+
+
+class AsdfHDU(NonstandardExtHDU):
+    """
+    FITS extension HDU class that acts as a container for embedded ASDF files.
+    """
+    _extension = 'FOREIGN '
+
+    @classmethod
+    def from_array(cls, buff):
+        """
+        Creates a new FitsHDU from a given HDUList object.
+
+        Parameters
+        ----------
+        hdulist : HDUList
+            A valid Headerlet object.
+        compress : bool, optional
+            Gzip compress the FITS file
+        """
+
+        # A proper HDUList should still be padded out to a multiple of 2880
+        # technically speaking
+        #padding = (_pad_length(bs.tell()) * cls._padding_byte).encode('ascii')
+        #bs.write(padding)
+
+        buff.seek(0, 2)
+        size = buff.tell()
+        buff.seek(0)
+
+        cards = [
+            ('XTENSION', cls._extension, 'FITS extension'),
+            ('BITPIX', 8, 'array data type'),
+            ('NAXIS', 0, 'number of array dimensions'),
+            ('PCOUNT', size, 'number of parameters'),
+            ('GCOUNT', 1, 'number of groups'),
+            ('EXTNAME', ASDF_EXTENSION_NAME, 'Name of the ASDF extension')
+        ]
+
+        header = Header(cards)
+        print(buff)
+        return cls._readfrom_internal(_File(buff), header=header)
 
 
 class _FitsBlock(object):
@@ -238,7 +283,7 @@ class AsdfInFits(asdf.AsdfFile):
         try:
             asdf_extension = self._hdulist[ASDF_EXTENSION_NAME]
         except (KeyError, IndexError, AttributeError):
-            self._hdulist.append(fits.ImageHDU(array, name=ASDF_EXTENSION_NAME))
+            self._hdulist.append(AsdfHDU.from_array(buff))
         else:
             asdf_extension.data = array
 
