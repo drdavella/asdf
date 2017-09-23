@@ -21,7 +21,7 @@ from . import generic_io
 try:
     from astropy.io import fits
     from astropy.io.fits.file import _File
-    from astropy.io.fits.header import Header
+    from astropy.io.fits.header import Header, _pad_length
     from astropy.io.fits.hdu.nonstandard import NonstandardExtHDU
 except ImportError:
     raise ImportError("AsdfInFits requires astropy")
@@ -51,26 +51,26 @@ class AsdfHDU(NonstandardExtHDU):
             Gzip compress the FITS file
         """
 
-        # A proper HDUList should still be padded out to a multiple of 2880
-        # technically speaking
-        #padding = (_pad_length(bs.tell()) * cls._padding_byte).encode('ascii')
-        #bs.write(padding)
 
         buff.seek(0, 2)
         size = buff.tell()
+        # A proper HDUList should still be padded out to a multiple of 2880
+        # technically speaking
+        padding = (_pad_length(size) * cls._padding_byte).encode('ascii')
+        buff.write(padding)
         buff.seek(0)
 
         cards = [
             ('XTENSION', cls._extension, 'FITS extension'),
             ('BITPIX', 8, 'array data type'),
-            ('NAXIS', 0, 'number of array dimensions'),
-            ('PCOUNT', size, 'number of parameters'),
+            ('NAXIS', 1, 'number of array dimensions'),
+            ('NAXIS1', len(buff.getvalue()), 'Axis length'),
+            ('PCOUNT', 0, 'number of parameters'),
             ('GCOUNT', 1, 'number of groups'),
             ('EXTNAME', ASDF_EXTENSION_NAME, 'Name of the ASDF extension')
         ]
 
         header = Header(cards)
-        print(buff)
         return cls._readfrom_internal(_File(buff), header=header)
 
 
