@@ -389,19 +389,22 @@ class NDArrayType(AsdfType):
 
     @classmethod
     def to_tree(cls, data, ctx):
-        base = util.get_array_base(data)
-        block = ctx.blocks.find_or_create_block_for_array(data, ctx)
         shape = data.shape
         dtype = data.dtype
+
+        if dtype.name == 'object':
+            return yamlutil.custom_tree_to_tagged_tree(
+                data.tolist(), ctx)
+
+        base = util.get_array_base(data)
+        block = ctx.blocks.find_or_create_block_for_array(data, ctx)
         offset = data.ctypes.data - base.ctypes.data
         if data.flags[b'C_CONTIGUOUS']:
             strides = None
         else:
             strides = data.strides
 
-        result = {}
-
-        result['shape'] = list(shape)
+        result = dict(shape=list(shape))
         if block.array_storage == 'streamed':
             result['shape'][0] = '*'
 
