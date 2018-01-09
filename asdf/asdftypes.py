@@ -103,6 +103,14 @@ class _AsdfWriteTypeIndex(object):
             if existing_type.tag_base() != new_type.tag_base():
                 return self._version == default_version
 
+            # Do not overwrite types that are already in the type index if the
+            # version of the existing type is an exact match with the
+            # corresponding version in the version map.
+            for name in existing_type.names():
+                tag = existing_type.make_yaml_tag(name, versioned=False)
+                if self._type_by_cls[cls].version == version_map.get(tag):
+                    return False
+
             return True
 
         def add_type_to_index(index, cls, typ):
