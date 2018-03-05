@@ -21,6 +21,9 @@ from asdf.tests import helpers
 
 @pytest.mark.parametrize('version', ['1.0.0', '1.1.0', '1.2.0'])
 def test_create_wcs(tmpdir, version):
+    if astropy.version.version >= '3.1' and version < '1.2.0':
+        pytest.xfail()
+
     m1 = models.Shift(12.4) & models.Shift(-2)
     m2 = models.Scale(2) & models.Scale(-2)
     icrs = cf.CelestialFrame(name='icrs', reference_frame=coord.ICRS())
