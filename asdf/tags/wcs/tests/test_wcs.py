@@ -283,3 +283,23 @@ frames:
         old_loc.z == new_loc.z)
     assert (old_vel.x == new_vel.x and old_vel.y == new_vel.y and
         old_vel.z == new_vel.z)
+
+
+if __name__ == '__main__':
+
+    import os
+    import py
+    import shutil
+    import logging
+
+    logging.basicConfig(format="[%(name)s:%(lineno)s] %(message)s")
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    try:
+        logger.info("running test_create_wcs")
+        tmpdir = py.path.local.mkdtemp()
+        test_create_wcs(tmpdir, '1.2.0')
+    finally:
+        if os.path.exists(tmpdir):
+            shutil.rmtree(tmpdir)
