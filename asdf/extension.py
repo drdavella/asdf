@@ -1,8 +1,9 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 # -*- coding: utf-8 -*-
 
-
+import os
 import abc
+import logging
 import warnings
 from pkg_resources import iter_entry_points
 
@@ -12,6 +13,9 @@ import importlib
 from . import asdftypes
 from . import resolver
 from .exceptions import AsdfDeprecationWarning
+
+
+_logger = logging.getLogger(os.path.basename(__file__))
 
 
 @six.add_metaclass(abc.ABCMeta)
@@ -109,6 +113,7 @@ class AsdfExtensionList(object):
     Manage a set of extensions that are in effect.
     """
     def __init__(self, extensions):
+        _logger.debug("creating AsdfExtensionList")
         tag_mapping = []
         url_mapping = []
         validators = {}
@@ -118,6 +123,7 @@ class AsdfExtensionList(object):
                 raise TypeError(
                     "Extension must implement asdftypes.AsdfExtension "
                     "interface")
+            _logger.debug("processing extension {}".format(extension))
             tag_mapping.extend(extension.tag_mapping)
             url_mapping.extend(extension.url_mapping)
             for typ in extension.types:

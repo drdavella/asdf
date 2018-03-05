@@ -1,12 +1,13 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 # -*- coding: utf-8 -*-
 
-
+import os
 import io
 import re
 import copy
-import datetime
+import logging
 import warnings
+import datetime
 import importlib
 
 import numpy as np
@@ -26,6 +27,9 @@ from .exceptions import AsdfDeprecationWarning
 from .extension import AsdfExtensionList, default_extensions
 
 from .tags.core import AsdfObject, Software, HistoryEntry
+
+
+_logger = logging.getLogger(os.path.basename(__file__))
 
 
 def get_asdf_library_info():
@@ -138,14 +142,17 @@ class AsdfFile(versioning.VersionedMixin):
 
     def _process_extensions(self, extensions):
         if extensions is None or extensions == []:
+            _logger.debug("using default extension list")
             return default_extensions.extension_list
 
         if isinstance(extensions, AsdfExtensionList):
+            _logger.debug("using provided extension list")
             return extensions
 
         if not isinstance(extensions, list):
             extensions = [extensions]
         extensions = default_extensions.extensions + extensions
+        _logger.debug("creating new extension list from list of extensions")
         return AsdfExtensionList(extensions)
 
     @property

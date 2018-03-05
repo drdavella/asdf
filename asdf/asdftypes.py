@@ -1,9 +1,10 @@
 # Licensed under a 3-clause BSD style license - see LICENSE.rst
 # -*- coding: utf-8 -*-
 
-
+import os
 import re
 import bisect
+import logging
 import warnings
 import importlib
 from collections import OrderedDict
@@ -16,6 +17,9 @@ from functools import lru_cache
 from . import tagged
 from . import util
 from .versioning import AsdfVersion, AsdfSpec, get_version_map, default_version
+
+
+_logger = logging.getLogger(os.path.basename(__file__))
 
 
 __all__ = ['format_tag', 'AsdfTypeIndex', 'AsdfType']
@@ -81,6 +85,7 @@ class _AsdfWriteTypeIndex(object):
     _version_map = None
 
     def __init__(self, version, index):
+        _logger.debug("creating AsdfWriteTypeIndex for version {}".format(version))
         self._version = version
 
         self._type_by_cls = {}
@@ -190,6 +195,7 @@ class AsdfTypeIndex(object):
     An index of the known `AsdfType`s.
     """
     def __init__(self):
+        _logger.debug("creating AsdfTypeIndex")
         self._write_type_indices = {}
         self._type_by_tag = {}
         # Use OrderedDict here to preserve the order in which types are added
@@ -210,6 +216,7 @@ class AsdfTypeIndex(object):
         """
         Add a type to the index.
         """
+        _logger.debug("adding type {}".format(asdftype))
         self._all_types.add(asdftype)
 
         if asdftype.yaml_tag is None and asdftype.name is None:
@@ -234,8 +241,10 @@ class AsdfTypeIndex(object):
                 idx = bisect.bisect_left(versions, version)
                 if idx == len(versions) or versions[idx] != version:
                     versions.insert(idx, version)
+            _logger.debug("adding {}, versions={}".format(yaml_tag, versions))
 
         if not len(yaml_tags):
+            _logger.debug("note: {} is an unnamed type".format(asdftype))
             self._unnamed_types.add(asdftype)
 
     def from_custom_type(self, custom_type, version=default_version):
