@@ -356,5 +356,6 @@ def test_serialize_table(tmpdir):
         ff.write_to(tmpfile)
 
     with asdf.AsdfFile.open(tmpfile) as ff:
+        print(ff.tree)
         data = ff.tree['my_table']
         assert data._source.startswith('fits:')

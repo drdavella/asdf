@@ -23,7 +23,7 @@ except ImportError:
     raise ImportError("AsdfInFits requires astropy")
 
 
-ASDF_EXTENSION_NAME = 'ASDF'
+ASDF_EXTENSION_NAME = 'FOREIGN'
 FITS_SOURCE_PREFIX = 'fits:'
 
 
@@ -37,7 +37,7 @@ class _AsdfHDU(fits.hdu.base.NonstandardExtHDU):
     an XTENSION keyword) of ASDF.
     """
 
-    _extension = ASDF_EXTENSION_NAME
+    _extension = 'ASDF'
 
     @classmethod
     def from_buff(cls, buff, compress=False, **kwargs):
@@ -94,6 +94,86 @@ class _AsdfHDU(fits.hdu.base.NonstandardExtHDU):
         # TODO: Perhaps make this more descriptive...
         axes = tuple(self.data.shape)
         return (self.name, self.ver, 'AsdfHDU', len(self._header), axes)
+
+
+class ForeignHDU(fits.hdu.base.NonstandardExtHDU):
+    """
+    This implements a special case of the non-standard FOREIGN extension HDU.
+    It is used for encapsulating an entire ASDF file within a single HDU of a
+    container FITS file. These HDUs have an extension (that is an XTENSION
+    keyword) of FOREIGN. FITS files created with this extension should validate
+    with any FITS reader.
+
+    See https://fits.gsfc.nasa.gov/registry/foreign.html for details on the
+    FOREIGN convention.
+    """
+
+    _extension = ASDF_EXTENSION_NAME
+
+    @classmethod
+    def from_buff(cls, buff, filename=''):
+        """
+        Creates a new _AsdfHDU from a given AsdfFile object.
+
+        Parameters
+        ----------
+        buff : io.BytesIO
+            A buffer containing an ASDF metadata tree
+        """
+
+        # A proper HDU should still be padded out to a multiple of 2880
+        # technically speaking
+        data_length = buff.tell()
+        padding = (_pad_length(data_length) * cls._padding_byte).encode('ascii')
+        buff.write(padding)
+
+        buff.seek(0)
+
+        cards = [
+            ('XTENSION', cls._extension, 'FOREIGN extension'),
+            ('BITPIX', 8, 'array data type'),
+            ('NAXIS', 0, 'number of array dimensions'),
+            ('PCOUNT', data_length, 'number of parameters'),
+            ('GCOUNT', 1, 'number of groups'),
+            ('EXTNAME', 'DATA.ASDF', 'Name of ASDF extension'),
+            ('FG_GROUP', 'ASDF', 'Group name'),
+            ('FG_FNAME', 'DATA.ASDF', 'File name'),
+            ('FG_FTYPE', 'binary', 'Physical file type'),
+            ('FG_LEVEL', 0, 'Directory nesting level'),
+            ('FG_FSIZE', data_length, 'Size of the ASDF file'),
+            ('FG_FMODE', '-', 'String representing file mode'),
+            ('FG_FUOWN', '0', 'File UID'),
+            ('FG_FUGRP', '0', 'File GID'),
+            ('FG_CTIME', '0', 'File creation time'),
+            ('FG_MTIME', '0', 'File modification time')
+        ]
+
+        header = Header(cards)
+        print('calling readfrom internal')
+        return cls._readfrom_internal(_File(buff), header=header)
+
+    @property
+    def size(self):
+        size = self._header.get('PCOUNT', 0)
+        print('size', size)
+        return size
+
+    @classmethod
+    def match_header(cls, header):
+        card = header.cards[0]
+        if card.keyword != 'XTENSION':
+            return False
+        xtension = card.value
+        if isinstance(xtension, str):
+            xtension = xtension.rstrip()
+        return xtension == cls._extension
+
+    # TODO: Add header verification
+
+    def _summary(self):
+        # TODO: Perhaps make this more descriptive...
+        axes = tuple(self.data.shape)
+        return (self.name, self.ver, 'ForeignHDU', len(self._header), axes)
 
 
 class _FitsBlock(object):
@@ -293,7 +373,7 @@ class AsdfInFits(asdf.AsdfFile):
             array = np.frombuffer(buff.getvalue(), np.uint8)
             return fits.ImageHDU(array, name=ASDF_EXTENSION_NAME)
         else:
-            return _AsdfHDU.from_buff(buff)
+            return ForeignHDU.from_buff(buff)
 
     def _update_asdf_extension(self, all_array_storage=None,
                                all_array_compression=None, auto_inline=None,
