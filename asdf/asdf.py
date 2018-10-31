@@ -153,13 +153,18 @@ class AsdfFile(versioning.VersionedMixin):
             self.tree = tree
             self.find_references()
 
+        # TODO: This is used to distinguish between different usages during the
+        # deprecation period, and should eventually be removed.
+        self._old_uri = False
+
         if uri is not None:
             warnings.warn(
                 "The 'uri' argument of the AsdfFile constructor has been "
-                "deprecated. Use the 'uri' argument to asdf.open and "
-                "AsdfFile.write_to instead.",
+                "deprecated and will be removed in asdf-3.0. Use the 'uri' "
+                "argument to asdf.open and AsdfFile.write_to instead.",
                 AsdfDeprecationWarning)
             self._uri = uri
+            self._old_uri = True
 
         self._comments = []
 
@@ -1037,6 +1042,12 @@ class AsdfFile(versioning.VersionedMixin):
         if version is not None:
             self.version = version
 
+        if self._old_uri:
+            warnings.warn(
+                "Using URI that was passed through deprecated argument to "
+                "AsdfFile constructor. Instead you should use the 'uri' "
+                "argument of AsdfFile.write_to.",
+                AsdfDeprecationWarning)
 
         with generic_io.get_file(fd, mode='w') as fd:
             # TODO: This is not ideal: we really should pass the URI through
@@ -1053,11 +1064,20 @@ class AsdfFile(versioning.VersionedMixin):
             finally:
                 self._post_write(fd)
 
-    def find_references(self):
+    def find_references(self, *args):
         """
         Finds all external "JSON References" in the tree and converts
         them to `reference.Reference` objects.
         """
+        if len(args) != 1:
+            warnings.warn(
+                "Calling 'find_references' without the 'uri' argument is "
+                "deprecated and will not be supported in asdf-3.0",
+                AsdfDeprecationWarning)
+            uri = self.uri
+        else:
+            uri = args[0]
+
         # Since this is the first place that the tree is processed when
         # creating a new ASDF object, this is where we pass the option to
         # ignore warnings about implicit type conversions.
@@ -1065,13 +1085,22 @@ class AsdfFile(versioning.VersionedMixin):
         self._tree = reference.find_references(self._tree, self,
                 ignore_implicit_conversion=self._ignore_implicit_conversion)
 
-    def resolve_references(self, do_not_fill_defaults=False):
+    def resolve_references(self, *args, do_not_fill_defaults=False):
         """
         Finds all external "JSON References" in the tree, loads the
         external content, and places it directly in the tree.  Saving
         a ASDF file after this operation means it will have no
         external references, and will be completely self-contained.
         """
+        if len(args) != 1:
+            warnings.warn(
+                "Calling 'resolve_references' without the 'uri' argument is "
+                "deprecated and will not be supported in asdf-3.0",
+                AsdfDeprecationWarning)
+            uri = self.uri
+        else:
+            uri = args[0]
+
         # Set to the property self.tree so the resulting "complete"
         # tree will be validated.
         self.tree = reference.resolve_references(self._tree, self)
