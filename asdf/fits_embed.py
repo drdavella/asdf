@@ -236,7 +236,7 @@ class AsdfInFits(asdf.AsdfFile):
                 msg = "Failed to parse given file '{}'. Is it FITS?"
                 raise ValueError(msg.format(uri))
 
-        self = cls(hdulist, uri=uri, extensions=extensions,
+        self = cls(hdulist, extensions=extensions,
                    ignore_version_mismatch=ignore_version_mismatch,
                    ignore_unrecognized_tag=ignore_unrecognized_tag)
         if _extension_metadata is not None:
