@@ -152,7 +152,13 @@ class AsdfFile(versioning.VersionedMixin):
         else:
             self.tree = tree
             self.find_references()
+
         if uri is not None:
+            warnings.warn(
+                "The 'uri' argument of the AsdfFile constructor has been "
+                "deprecated. Use the 'uri' argument to asdf.open and "
+                "AsdfFile.write_to instead.",
+                AsdfDeprecationWarning)
             self._uri = uri
 
         self._comments = []
