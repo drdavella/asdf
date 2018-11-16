@@ -777,17 +777,7 @@ class AsdfFile(versioning.VersionedMixin):
 
         self._all_array_compression = all_array_compression
 
-        if auto_inline in (True, False):
-            raise ValueError(
-                "Invalid value for auto_inline: '{0}'".format(auto_inline))
-        if auto_inline is not None:
-            try:
-                self._auto_inline = int(auto_inline)
-            except ValueError:
-                raise ValueError(
-                    "Invalid value for auto_inline: '{0}'".format(auto_inline))
-        else:
-            self._auto_inline = None
+        self._auto_inline = auto_inline
 
         if len(self._tree):
             self.run_hook('pre_write')

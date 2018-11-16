@@ -586,8 +586,8 @@ class BlockManager(object):
             block.output_compression = all_array_compression
 
         auto_inline = getattr(ctx, '_auto_inline', None)
-        if auto_inline:
-            if np.product(block.data.shape) < auto_inline:
+        if auto_inline is not None:
+            if self._should_inline(block.data, auto_inline):
                 self.set_array_storage(block, 'inline')
 
     def finalize(self, ctx):
@@ -716,7 +716,10 @@ class BlockManager(object):
 
         raise ValueError("block not found.")
 
-    def _should_inline(self, array):
+    def _should_inline(self, array, inline_threshold):
+
+        if array is None:
+            return False
 
         if not np.issubdtype(array.dtype, np.number):
             return False
@@ -728,7 +731,7 @@ class BlockManager(object):
         if (array[~np.isnan(array)] > 2**52).any():
             return False
 
-        return array.size <= self._inline_threshold_size
+        return array.size <= inline_threshold
 
     def find_or_create_block_for_array(self, arr, ctx):
         """

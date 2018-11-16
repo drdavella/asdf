@@ -179,6 +179,7 @@ def _assert_roundtrip_tree(tree, tmpdir, *, asdf_check_func=None,
                            tree_match_func='assert_equal'):
 
     fname = str(tmpdir.join('test.asdf'))
+    write_options.setdefault('auto_inline', 0)
 
     # First, test writing/reading a BytesIO buffer
     buff = io.BytesIO()
