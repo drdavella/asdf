@@ -10,6 +10,7 @@ import copy
 import datetime
 import warnings
 import importlib
+from collections import OrderedDict
 from distutils.version import LooseVersion
 
 import numpy as np
@@ -132,6 +133,12 @@ class AsdfFile(versioning.VersionedMixin):
         self._blocks = block.BlockManager(
             self, copy_arrays=copy_arrays, lazy_load=lazy_load,
             readonly=_readonly)
+
+        self._array_storage = OrderedDict()
+        self.copy_arrays = copy_arrays
+        self.lazy_load = lazy_load
+        self.readonly = _readonly
+
         self._uri = None
         if tree is None:
             self.tree = {}
@@ -482,8 +489,7 @@ class AsdfFile(versioning.VersionedMixin):
 
             - ``inline``: Store the data as YAML inline in the tree.
         """
-        block = self.blocks[arr]
-        self.blocks.set_array_storage(block, array_storage)
+        self._array_storage[block] = array_storage
 
     def get_array_storage(self, arr):
         """
@@ -826,6 +832,17 @@ class AsdfFile(versioning.VersionedMixin):
         if hasattr(self, '_auto_inline'):
             del self._auto_inline
 
+    def _create_block_manager(self):
+
+        blocks = block.BlockManager(self, copy_arrays=self.copy_arrays,
+                                    lazy_load=self.lazy_load,
+                                    readonly=self.readonly)
+
+        for blk, storage in self._array_storage.items():
+            blocks.set_array_storage(blk, storage)
+
+        return blocks
+
     def update(self, all_array_storage=None, all_array_compression='input',
                auto_inline=None, pad_blocks=False, include_block_index=True,
                version=None):
@@ -1030,6 +1047,7 @@ class AsdfFile(versioning.VersionedMixin):
         if version is not None:
             self.version = version
 
+        blocks = self._create_block_manager()
 
         with generic_io.get_file(fd, mode='w') as fd:
             # TODO: This is not ideal: we really should pass the URI through
@@ -1037,11 +1055,11 @@ class AsdfFile(versioning.VersionedMixin):
             # attribute of the AsdfFile.
             if self._uri is None:
                 self._uri = fd.uri
-            self._pre_write(fd, self.blocks, all_array_storage,
+            self._pre_write(fd, blocks, all_array_storage,
                             all_array_compression, auto_inline)
 
             try:
-                self._serial_write(fd, self.blocks, pad_blocks, include_block_index)
+                self._serial_write(fd, blocks, pad_blocks, include_block_index)
                 fd.flush()
             finally:
                 self._post_write(fd)
