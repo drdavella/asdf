@@ -767,7 +767,7 @@ class AsdfFile(versioning.VersionedMixin):
                 fd.tell(), pad_blocks, fd.block_size)
             fd.fast_forward(padding)
 
-    def _pre_write(self, fd, all_array_storage, all_array_compression,
+    def _pre_write(self, fd, blocks, all_array_storage, all_array_compression,
                    auto_inline):
         if all_array_storage not in (None, 'internal', 'external', 'inline'):
             raise ValueError(
@@ -794,24 +794,24 @@ class AsdfFile(versioning.VersionedMixin):
 
         # This is where we'd do some more sophisticated block
         # reorganization, if necessary
-        self._blocks.finalize(self)
+        blocks.finalize(self)
 
         self._tree['asdf_library'] = get_asdf_library_info()
         self._update_extension_history()
 
-    def _serial_write(self, fd, pad_blocks, include_block_index):
+    def _serial_write(self, fd, blocks, pad_blocks, include_block_index):
         self._write_tree(self._tree, fd, pad_blocks)
-        self.blocks.write_internal_blocks_serial(fd, pad_blocks)
-        self.blocks.write_external_blocks(fd.uri, pad_blocks)
+        blocks.write_internal_blocks_serial(fd, pad_blocks)
+        blocks.write_external_blocks(fd.uri, pad_blocks)
         if include_block_index:
-            self.blocks.write_block_index(fd, self)
+            blocks.write_block_index(fd, self)
 
-    def _random_write(self, fd, pad_blocks, include_block_index):
+    def _random_write(self, fd, blocks, pad_blocks, include_block_index):
         self._write_tree(self._tree, fd, False)
-        self.blocks.write_internal_blocks_random_access(fd)
-        self.blocks.write_external_blocks(fd.uri, pad_blocks)
+        blocks.write_internal_blocks_random_access(fd)
+        blocks.write_external_blocks(fd.uri, pad_blocks)
         if include_block_index:
-            self.blocks.write_block_index(fd, self)
+            blocks.write_block_index(fd, self)
         fd.truncate()
 
     def _post_write(self, fd):
@@ -912,8 +912,8 @@ class AsdfFile(versioning.VersionedMixin):
 
         self.blocks.finish_reading_internal_blocks()
 
-        self._pre_write(fd, all_array_storage, all_array_compression,
-                        auto_inline)
+        self._pre_write(fd, self.blocks, all_array_storage,
+                        all_array_compression, auto_inline)
 
         try:
             fd.seek(0)
@@ -921,7 +921,7 @@ class AsdfFile(versioning.VersionedMixin):
             if not self.blocks.has_blocks_with_offset():
                 # If we don't have any blocks that are being reused, just
                 # write out in a serial fashion.
-                self._serial_write(fd, pad_blocks, include_block_index)
+                self._serial_write(fd, self.blocks, pad_blocks, include_block_index)
                 fd.truncate()
                 return
 
@@ -949,12 +949,13 @@ class AsdfFile(versioning.VersionedMixin):
                     pad_blocks, fd.block_size):
                 # If we don't have any blocks that are being reused, just
                 # write out in a serial fashion.
-                self._serial_write(fd, pad_blocks, include_block_index)
+                self._serial_write(fd, self.blocks, pad_blocks,
+                                   include_block_index)
                 fd.truncate()
                 return
 
             fd.seek(0)
-            self._random_write(fd, pad_blocks, include_block_index)
+            self._random_write(fd, self.blocks, pad_blocks, include_block_index)
             fd.flush()
         finally:
             self._post_write(fd)
@@ -1036,11 +1037,11 @@ class AsdfFile(versioning.VersionedMixin):
             # attribute of the AsdfFile.
             if self._uri is None:
                 self._uri = fd.uri
-            self._pre_write(fd, all_array_storage, all_array_compression,
-                            auto_inline)
+            self._pre_write(fd, self.blocks, all_array_storage,
+                            all_array_compression, auto_inline)
 
             try:
-                self._serial_write(fd, pad_blocks, include_block_index)
+                self._serial_write(fd, self.blocks, pad_blocks, include_block_index)
                 fd.flush()
             finally:
                 self._post_write(fd)
