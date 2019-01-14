@@ -199,6 +199,7 @@ def test_too_many_streams():
     with pytest.raises(ValueError):
         ff.set_array_storage(tree['stream2'], 'streamed')
 
+
 def test_stream_repr_and_str():
     tree = {
         'stream': stream.Stream([16], np.int64)
@@ -207,3 +208,18 @@ def test_stream_repr_and_str():
     ff = asdf.AsdfFile(tree)
     repr(ff.tree['stream'])
     str(ff.tree['stream'])
+
+
+def test_stream_external(tmpdir):
+
+    streamed = stream.Stream([16], np.int64, external=True)
+    tree = dict(streamed=streamed)
+
+    outfile = str(tmpdir.join('stream.asdf'))
+
+    with asdf.AsdfFile(tree) as af:
+        af.write_to(outfile)
+
+    with streamed.open() as strm:
+         for i in range(5):
+            strm.write(np.array([i] * 16, np.float64).tostring())
