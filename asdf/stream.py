@@ -27,17 +27,34 @@ class Stream(ndarray.NDArrayType):
     name = None
     types = []
 
-    def __init__(self, shape, dtype, strides=None):
+    def __init__(self, shape, dtype, strides=None, external=False):
         self._shape = shape
         self._datatype, self._byteorder = ndarray.numpy_dtype_to_asdf_datatype(dtype)
         self._strides = strides
+        self._external = external
         self._array = None
 
     def _make_array(self):
         self._array = None
 
+    def open(self):
+        assert self._external == True
+        self._fd = open('extstream.asdf', 'wb')
+        return self
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self._fd.close()
+
+    def write(self, data):
+        self._fd.write(data)
+
     @classmethod
     def reserve_blocks(cls, data, ctx):
+        if data._external:
+            yield ctx.blocks.get_external_block()
         if isinstance(data, Stream):
             yield ctx.blocks.get_streamed_block()
 
